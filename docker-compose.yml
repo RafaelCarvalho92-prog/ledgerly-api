@@ -1,0 +1,37 @@
+# Local stack (not executed in this repo). `docker compose up --build`
+# The API runs on SQLite by default (volume). The postgres service is provisioned for the
+# Postgres path described in README ("Running on Postgres"): its schema is in migrations/postgres.
+services:
+  api:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (32+ chars) in .env}
+      DATABASE_URL: /data/ledgerly.db
+      LOG_LEVEL: info
+      CORS_ORIGINS: http://localhost:5173
+    volumes: ["api-data:/data"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ledgerly
+      POSTGRES_USER: ledgerly
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ledgerly-local-only}
+    ports: ["5432:5432"]
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./migrations/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledgerly -d ledgerly"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  api-data:
+  pg-data:

@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npx vitest run --coverage
+      - run: npm run build
+      - name: Build API docs site
+        run: npx tsx scripts/build-docs.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: docs-site/dist
